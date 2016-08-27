@@ -44,31 +44,31 @@ process. Please comment your code and explain it in detail.
 const stops = [
   {
     id: 0,
-    title: 'Stop 1',
+    title: 'Stop 0',
     description: 'The corner of x and y',
     latitude: 45.23432,
     longitude: -48.23423
   },
   {
     id: 1,
-    title: 'Stop 2',
+    title: 'Stop 1',
     description: 'The corner of x and y',
-    latitude: 45.23432,
-    longitude: -48.23423
+    latitude: 46.2,
+    longitude: -47.0
   },
   {
     id: 2,
-    title: 'Stop 3',
+    title: 'Stop 2',
     description: 'The corner of x and y',
-    latitude: 45.23432,
-    longitude: -48.23423
+    latitude: 48.5,
+    longitude: -50.3
   },
   {
     id: 3,
-    title: 'Stop 4',
+    title: 'Stop 3',
     description: 'The corner of x and y',
-    latitude: 45.23432,
-    longitude: -48.23423
+    latitude: 52.1,
+    longitude: -39.9
   },
 ];
 
@@ -134,7 +134,7 @@ let vehicles = [
       longitude: -48.23423,
     },
     //index in routes.stops of next stop:
-    nextStop: 3,
+    nextStop: 2,
   },
   {
     id: 1,
@@ -151,7 +151,7 @@ let vehicles = [
 
 const assignments = [
    {
-     route: 0,
+     route: 1,
      ride: 100,
      driver: 0,
      vehicle: 0,
@@ -201,7 +201,7 @@ const geolocationData = [
     longitude: -48.23423,
     time: '9:00am', //most likely an actual ISO/UTC date string,
     // a bunch of other data like heading, speed, etc.
-  }
+  },
 ];
 
 // sample geolocation data;
@@ -221,43 +221,47 @@ function arriving(geolocationData) {
   let geohour = -1;
   let geomin = -1;
 
-  for (var of stops) {
-    if ((var.latitude === geolocationData.latitude) && (var.longitude === geolocationData.longitude)) {
-      currentStop = var.id;
+  for (var val of stops) {
+    if ((val.latitude === geolocationData[0].latitude) && (val.longitude === geolocationData[0].longitude)) {
+      currentStop = val.id;
       break;
     }
   }
 
-  for (var of assignments) {
-    if (var.vehicle === geolocationData.vehicle) {
-      routenum = var.route;
-      ridenum = var.ride;
+  for (var val of assignments) {
+    if (val.vehicle === geolocationData[0].vehicle) {
+      routenum = val.route;
+      ridenum = val.ride;
     }
   }
+  //console.log(`route num: ${routenum}`);
+  //console.log(`ridenum: ${ridenum}`);
 
-  globroute = routes[routenum]
-  globride = globroute.rides[ridenum-100];
-  routestops = route.stops;
+  globroute = routes[routenum];
+  globride = globroute.rides[ridenum-100].times;
+  //console.log(`globride: ${globride}`);
+  routestops = globroute.stops;
 
   //parse hour and minute data from geolocation data:
-  if (geolocationData.time.substr(1,1) === ':') {
-    geohour = ToNumber(geolocationData.time.substr(0,1));
-    geomin = ToNumber(geolocationData.time.substr(2,2));
-  } else if (geolocationData.time.substr(2,1) === ':') {
-    geohour = ToNumber(geolocationData.time.substr(0,2));
-    geomin = ToNumber(geolocationData.time.substr(3,2));
+  if (geolocationData[0].time.substr(1,1) === ':') {
+    geohour = Number(geolocationData[0].time.substr(0,1));
+    geomin = Number(geolocationData[0].time.substr(2,2));
+  } else if (geolocationData.time[0].substr(2,1) === ':') {
+    geohour = Number(geolocationData[0].time.substr(0,2));
+    geomin = Number(geolocationData[0].time.substr(3,2));
   }
 
-  let presetStop = vehicles[geolocationData.vehicle].nextStop;
+  let presetStop = vehicles[geolocationData[0].vehicle].nextStop;
 
   let stopsMissed = 0;
-  while (currentStop != presetStop) {
-    presetStop++;
-    presetStop = presetStop % routestops.length;
-    stopsMissed++;
-    if (stopsMissed === routestops.length) {
-      break;
-    }
+  //console.log (`currentStopindex: ${currentStop}`);
+  //console.log (`presetStopindex: ${presetStop}`);
+  console.log (`presetStop: ${routestops[presetStop]}`);
+  console.log (`currentStop: ${routestops[currentStop]}`);
+  if (currentStop != presetStop) {
+    stopsMissed = (currentStop+routestops.length - presetStop) % routestops.length;
+    //console.log (`stopsMissed: ${stopsMissed}`);
+    //currentStop = presetStop;
   }
 
   //log errors for missed stops:
@@ -266,7 +270,7 @@ function arriving(geolocationData) {
       id: 1,
       numStopsSkipped: stopsMissed,
     }
-    console.log("stop sync error occured.");
+    console.log(`stop sync error occured. ${stopsMissed} stops skipped.`);
     // log a message to console, perhaps log an error in an error object...
   };
 
@@ -274,65 +278,70 @@ function arriving(geolocationData) {
   //if they are the same, check time and use next stop from vehicles:
   //current stop set in the vehicles data object:
     //will hold nextStop to be set after presetStop is reached:
-    let routeNextStop = 0;
+    let routeNextStop = currentStop + 1 % globride.length;
     //if they are the same we check the time, check the route and update vehicles values and add a new log to arrivals:
 
       //parse hour and minute data from route:
-    let i=0;
-    for (var of routestops) {
-      if (var === currentStop) {
-        break;
-      }
-      i++;
-    }
+    // let i=0;
+    // for (var val of routestops) {
+    //    if (val === currentStop) {
+    //      break;
+    //    }
+    //    i++;
+    //  }
+    //  i = i % routestops.length;
+    //console.log(`i: ${i}`);
     //next stop from route.stops:
-    routeNextStop = routestops[i+1];
+    //routeNextStop = routestops[(i+1) % globride.length];
+    //console.log(`prevstop: ${routestops[currentStop]}`);
+    //console.log(`nextstop: ${routestops[routeNextStop]}`);
 
     //parse time from ride.times:
-    let currtime = globride.times[i];
+    let currtime = globride[currentStop];
+    //console.log(`currtime: ${currtime}`);
     let currhour = -1;
     let currmin = -1;
 
     if (currtime.substr(1,1) === ':') {
-      currhour = ToNumber(currtimetime.substr(0,1));
-      currmin = ToNumber(currtime.substr(2,2));
+      currhour = Number(currtime.substr(0,1));
+      currmin = Number(currtime.substr(2,2));
     } else if (currtime.substr(2,1) === ':') {
-      currhour = ToNumber(currtime.substr(0,2));
-      currmin = ToNumber(currtime.substr(3,2));
+      currhour = Number(currtime.substr(0,2));
+      currmin = Number(currtime.substr(3,2));
     }
 
     //push newArrival to arrivals:
     if ((currhour > geohour) || ((currhour === geohour) && (currmin > geomin))){
-      newArrival = {
+      let newArrival = {
         id: 2,
-        driver: geolocationData.driver,
+        driver: geolocationData[0].driver,
         route: globroute.id,
         ride: ridenum,
-        vehicle: geolocationData.vehicle,
-        time: '${geohour}:${geomin}am', //most likely an actual ISO/UTC date string
+        vehicle: geolocationData[0].vehicle,
+        time: `${geohour}:${geomin}am`, //most likely an actual ISO/UTC date string
         onTime: true,
       }
-      console.log("Bus on time. Next is stop ${routeNextStop}");
+      console.log(`Bus on time. Next is stop ${routestops[routeNextStop]}`);
       newArrival = arrivals.push(newArrival);
     } else {
-      newArrival = {
+      let newArrival = {
         id: 2,
-        driver: geolocationData.driver,
+        driver: geolocationData[0].driver,
         route: globroute.id,
         ride: ridenum,
-        vehicle: geolocationData.vehicle,
-        time: '${geohour}:${geomin}am', //most likely an actual ISO/UTC date string
+        vehicle: geolocationData[0].vehicle,
+        time: `${geohour}:${geomin}am`, //most likely an actual ISO/UTC date string
         onTime: false,
       }
-      console.log("Bus on time. Next is stop ${routeNextStop}");
+      console.log(`Bus late. Next is stop ${routestops[routeNextStop]}`);
       newArrival = arrivals.push(newArrival);
     }
 
     //reset vehicles values:
     //vehicles[geolocationData.vehicle - 1].currentStop = presetStop;
-    vehicles[geolocationData.vehicle - 1].nextStop = routeNextStop;
-    vehicles[geolocationData.vehicle - 1].currentLocation.latitude = geolocationData.latitude;
-    vehicles[geolocationData.vehicle - 1].currentLocation.longitude = geolocationData.longitude;
+    vehicles[geolocationData[0].vehicle].nextStop = routeNextStop;
+    vehicles[geolocationData[0].vehicle].currentLocation.latitude = geolocationData.latitude;
+    vehicles[geolocationData[0].vehicle].currentLocation.longitude = geolocationData.longitude;
   //}
 }
 

@@ -45,28 +45,28 @@ process. Please comment your code and explain it in detail.
 
 var stops = [{
   id: 0,
-  title: 'Stop 1',
+  title: 'Stop 0',
   description: 'The corner of x and y',
   latitude: 45.23432,
   longitude: -48.23423
 }, {
   id: 1,
-  title: 'Stop 2',
+  title: 'Stop 1',
   description: 'The corner of x and y',
-  latitude: 45.23432,
-  longitude: -48.23423
+  latitude: 46.2,
+  longitude: -47.0
 }, {
   id: 2,
-  title: 'Stop 3',
+  title: 'Stop 2',
   description: 'The corner of x and y',
-  latitude: 45.23432,
-  longitude: -48.23423
+  latitude: 48.5,
+  longitude: -50.3
 }, {
   id: 3,
-  title: 'Stop 4',
+  title: 'Stop 3',
   description: 'The corner of x and y',
-  latitude: 45.23432,
-  longitude: -48.23423
+  latitude: 52.1,
+  longitude: -39.9
 }];
 
 var routes = [{
@@ -116,7 +116,7 @@ var vehicles = [{
     longitude: -48.23423
   },
   //index in routes.stops of next stop:
-  nextStop: 3
+  nextStop: 2
 }, {
   id: 1,
   name: 'Vehicle #2',
@@ -130,7 +130,7 @@ var vehicles = [{
 }];
 
 var assignments = [{
-  route: 0,
+  route: 1,
   ride: 100,
   driver: 0,
   vehicle: 0
@@ -229,6 +229,8 @@ function arriving(geolocationData) {
         ridenum = val.ride;
       }
     }
+    //console.log(`route num: ${routenum}`);
+    //console.log(`ridenum: ${ridenum}`);
   } catch (err) {
     _didIteratorError2 = true;
     _iteratorError2 = err;
@@ -245,7 +247,8 @@ function arriving(geolocationData) {
   }
 
   globroute = routes[routenum];
-  globride = globroute.rides[ridenum - 100];
+  globride = globroute.rides[ridenum - 100].times;
+  //console.log(`globride: ${globride}`);
   routestops = globroute.stops;
 
   //parse hour and minute data from geolocation data:
@@ -260,13 +263,14 @@ function arriving(geolocationData) {
   var presetStop = vehicles[geolocationData[0].vehicle].nextStop;
 
   var stopsMissed = 0;
-  while (currentStop != presetStop) {
-    presetStop++;
-    presetStop = presetStop % routestops.length;
-    stopsMissed++;
-    if (stopsMissed === routestops.length) {
-      break;
-    }
+  //console.log (`currentStopindex: ${currentStop}`);
+  //console.log (`presetStopindex: ${presetStop}`);
+  console.log('presetStop: ' + routestops[presetStop]);
+  console.log('currentStop: ' + routestops[currentStop]);
+  if (currentStop != presetStop) {
+    stopsMissed = (currentStop + routestops.length - presetStop) % routestops.length;
+    //console.log (`stopsMissed: ${stopsMissed}`);
+    //currentStop = presetStop;
   }
 
   //log errors for missed stops:
@@ -275,56 +279,39 @@ function arriving(geolocationData) {
       id: 1,
       numStopsSkipped: stopsMissed
     };
-    console.log("stop sync error occured.");
+    console.log('stop sync error occured. ' + stopsMissed + ' stops skipped.');
     // log a message to console, perhaps log an error in an error object...
   };
 
   //if they are the same, check time and use next stop from vehicles:
   //current stop set in the vehicles data object:
   //will hold nextStop to be set after presetStop is reached:
-  var routeNextStop = 0;
+  var routeNextStop = currentStop + 1 % globride.length;
   //if they are the same we check the time, check the route and update vehicles values and add a new log to arrivals:
 
   //parse hour and minute data from route:
-  var i = 0;
-  var _iteratorNormalCompletion3 = true;
-  var _didIteratorError3 = false;
-  var _iteratorError3 = undefined;
-
-  try {
-    for (var _iterator3 = routestops[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-      var val = _step3.value;
-
-      if (val === currentStop) {
-        break;
-      }
-      i++;
-    }
-    //next stop from route.stops:
-  } catch (err) {
-    _didIteratorError3 = true;
-    _iteratorError3 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion3 && _iterator3.return) {
-        _iterator3.return();
-      }
-    } finally {
-      if (_didIteratorError3) {
-        throw _iteratorError3;
-      }
-    }
-  }
-
-  routeNextStop = routestops[i + 1];
+  // let i=0;
+  // for (var val of routestops) {
+  //    if (val === currentStop) {
+  //      break;
+  //    }
+  //    i++;
+  //  }
+  //  i = i % routestops.length;
+  //console.log(`i: ${i}`);
+  //next stop from route.stops:
+  //routeNextStop = routestops[(i+1) % globride.length];
+  //console.log(`prevstop: ${routestops[currentStop]}`);
+  //console.log(`nextstop: ${routestops[routeNextStop]}`);
 
   //parse time from ride.times:
-  var currtime = globride.times[i];
+  var currtime = globride[currentStop];
+  //console.log(`currtime: ${currtime}`);
   var currhour = -1;
   var currmin = -1;
 
   if (currtime.substr(1, 1) === ':') {
-    currhour = Number(currtimetime.substr(0, 1));
+    currhour = Number(currtime.substr(0, 1));
     currmin = Number(currtime.substr(2, 2));
   } else if (currtime.substr(2, 1) === ':') {
     currhour = Number(currtime.substr(0, 2));
@@ -333,36 +320,36 @@ function arriving(geolocationData) {
 
   //push newArrival to arrivals:
   if (currhour > geohour || currhour === geohour && currmin > geomin) {
-    newArrival = {
+    var newArrival = {
       id: 2,
       driver: geolocationData[0].driver,
       route: globroute.id,
       ride: ridenum,
       vehicle: geolocationData[0].vehicle,
-      time: '${geohour}:${geomin}am', //most likely an actual ISO/UTC date string
+      time: geohour + ':' + geomin + 'am', //most likely an actual ISO/UTC date string
       onTime: true
     };
-    console.log("Bus on time. Next is stop ${routeNextStop}");
+    console.log('Bus on time. Next is stop ' + routestops[routeNextStop]);
     newArrival = arrivals.push(newArrival);
   } else {
-    newArrival = {
+    var _newArrival = {
       id: 2,
       driver: geolocationData[0].driver,
       route: globroute.id,
       ride: ridenum,
       vehicle: geolocationData[0].vehicle,
-      time: '${geohour}:${geomin}am', //most likely an actual ISO/UTC date string
+      time: geohour + ':' + geomin + 'am', //most likely an actual ISO/UTC date string
       onTime: false
     };
-    console.log("Bus on time. Next is stop ${routeNextStop}");
-    newArrival = arrivals.push(newArrival);
+    console.log('Bus late. Next is stop ' + routestops[routeNextStop]);
+    _newArrival = arrivals.push(_newArrival);
   }
 
   //reset vehicles values:
   //vehicles[geolocationData.vehicle - 1].currentStop = presetStop;
-  vehicles[geolocationData.vehicle - 1].nextStop = routeNextStop;
-  vehicles[geolocationData.vehicle - 1].currentLocation.latitude = geolocationData.latitude;
-  vehicles[geolocationData.vehicle - 1].currentLocation.longitude = geolocationData.longitude;
+  vehicles[geolocationData[0].vehicle].nextStop = routeNextStop;
+  vehicles[geolocationData[0].vehicle].currentLocation.latitude = geolocationData.latitude;
+  vehicles[geolocationData[0].vehicle].currentLocation.longitude = geolocationData.longitude;
   //}
 }
 
